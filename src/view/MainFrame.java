@@ -3,6 +3,7 @@ package view;
 import controller.AnalysisController;
 import model.DataReader;
 import model.PatientRecord;
+import weka.classifiers.Evaluation;
 
 import javax.swing.*;
 import java.awt.*;
@@ -65,7 +66,6 @@ public class MainFrame extends JFrame {
     // Handles the "Load CSV Data" button click
     private void handleLoadAction(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
-        // Set the starting directory to the project folder for convenience
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
         int result = fileChooser.showOpenDialog(this);
 
@@ -77,13 +77,11 @@ public class MainFrame extends JFrame {
             new SwingWorker<List<PatientRecord>, Void>() {
                 @Override
                 protected List<PatientRecord> doInBackground() throws Exception {
-                    // This runs on a background thread
                     return dataReader.loadFromCSV(selectedFile.getAbsolutePath());
                 }
 
                 @Override
                 protected void done() {
-                    // This runs back on the GUI thread (EDT)
                     try {
                         loadedRecords = get();
                         resultsArea.setText("Data Loaded Successfully.\nTotal Records: " + loadedRecords.size() + "\n\n");
@@ -112,28 +110,26 @@ public class MainFrame extends JFrame {
         resultsArea.append("Starting J48 Classification... (Weka analysis running in background)\n");
         statusLabel.setText("Status: Analyzing data...");
 
-        // Use SwingWorker for Weka analysis (essential for complex computations)
-        new SwingWorker<String, Void>() {
+        // SwingWorker parameterized to return the Weka Evaluation object
+        new SwingWorker<Evaluation, Void>() {
             @Override
-            protected String doInBackground() throws Exception {
-                // Call the controller's heavy computational method
+            protected Evaluation doInBackground() throws Exception {
                 return controller.runJ48Classification(loadedRecords);
             }
 
             @Override
             protected void done() {
-                // Re-enable buttons and display results on the GUI thread
                 analyzeButton.setEnabled(true);
                 loadButton.setEnabled(true);
                 try {
-                    String results = get();
-                    resultsArea.append(results);
+                    Evaluation evaluation = get();
+
+                    // Display the text summary
+                    resultsArea.append(evaluation.toSummaryString("\n--- J48 Classification Results (10-Fold Cross-Validation) ---\n", false));
                     statusLabel.setText("Status: Analysis complete.");
 
-                    // *** MODIFICATION APPLIED HERE ***
-                    // Launch the dedicated Chart display frame on the EDT
-                    SwingUtilities.invokeLater(ChartDisplayFrame::new);
-                    // *** END MODIFICATION ***
+                    // Launch Chart with the actual Evaluation object
+                    SwingUtilities.invokeLater(() -> new ChartDisplayFrame(evaluation));
 
                 } catch (Exception ex) {
                     resultsArea.append("Analysis Failed: " + ex.getMessage() + "\n");
@@ -143,8 +139,8 @@ public class MainFrame extends JFrame {
         }.execute();
     }
 
-    // Main method: Start the application on the Event Dispatch Thread
-    public static void main(String[] args) { // This is the corrected signature from the previous turn
+    // Main method: Start the application on the Event Dispatch Thread (Correct Signature)
+    public static void main(String []args) {
         SwingUtilities.invokeLater(MainFrame::new);
     }
 }

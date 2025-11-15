@@ -1,5 +1,7 @@
 package view;
 
+import weka.classifiers.Evaluation;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -8,11 +10,12 @@ import java.awt.*;
  */
 public class ChartDisplayFrame extends JFrame {
 
-    public ChartDisplayFrame() {
-        super("Classification Performance Chart");
+    // MODIFICATION: Accepts the Evaluation object to pass to the panel
+    public ChartDisplayFrame(Evaluation evaluation) {
+        super("J48 Classification Performance Chart");
 
-        // Use the SimpleChartPanel component (which contains the JFreeChart)
-        SimpleChartPanel chartPanel = new SimpleChartPanel();
+        // Pass the live evaluation data to the chart panel
+        SimpleChartPanel chartPanel = new SimpleChartPanel(evaluation);
 
         // Add the chart panel to the center of this new frame
         this.add(chartPanel, BorderLayout.CENTER);

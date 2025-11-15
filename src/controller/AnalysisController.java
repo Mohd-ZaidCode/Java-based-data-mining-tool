@@ -13,9 +13,12 @@ import java.util.Random;
  */
 public class AnalysisController {
 
-    public String runJ48Classification(List<PatientRecord> records) throws Exception {
+    // The method is declared to return an Evaluation object.
+    public Evaluation runJ48Classification(List<PatientRecord> records) throws Exception {
+
+        // FIX 1: If data is empty, throw an Exception instead of returning a String.
         if (records.isEmpty()) {
-            return "Error: No data records loaded.";
+            throw new Exception("Error: No data records loaded.");
         }
 
         // 1. Convert Java List into Weka's required Instances structure
@@ -23,18 +26,21 @@ public class AnalysisController {
 
         // 2. Instantiate the J48 Classifier
         J48 j48Classifier = new J48();
-        // j48Classifier.buildClassifier(data); // <-- REMOVED (Not needed for cross-validation)
+        // NOTE: While crossValidateModel does internal building, including this ensures Weka is initialized correctly
+        // and is standard practice.
+        j48Classifier.buildClassifier(data); // Train the J48 classifier [3]
 
         // 3. Evaluation setup and 10-fold cross-validation
-        Evaluation evaluation = new Evaluation(data); // Initialize evaluation
+        Evaluation evaluation = new Evaluation(data); // Initialize evaluation [4]
 
-        // Perform 10-fold cross-validation for robust evaluation
+        // Perform 10-fold cross-validation for robust evaluation [4]
         Random rand = new Random(1); // Using a seed (1) for reproducible results
         evaluation.crossValidateModel(j48Classifier, data, 10, rand);
 
-        // 4. Return the comprehensive summary string for display
-        // <-- CORRECTED: Removed the invalid '[7]' from the end of the line
-        return evaluation.toSummaryString("\n--- J48 Classification Results (10-Fold Cross-Validation) ---\n", false);
+        // 4. Print results to console (optional but helpful)
+        System.out.println(evaluation.toSummaryString("\n--- J48 Classification Results (10-Fold Cross-Validation) ---\n", false));
+
+        return evaluation; // Return the full evaluation object
     }
 
     // Helper method: Maps PatientRecord attributes to Weka Attributes
@@ -53,22 +59,24 @@ public class AnalysisController {
 
         // Create Weka Instances collection
         Instances data = new Instances(relationName, attributes, records.size());
-        data.setClassIndex(data.numAttributes() - 1); // Set Diagnosis as the class
+        data.setClassIndex(data.numAttributes() - 1); // Set Diagnosis as the class [3]
 
         // Populate the Instances object with data from the PatientRecords
         for (PatientRecord record : records) {
             double[] vals = new double[data.numAttributes()];
 
             // Populate values for Age and BMI
-            // vals = record.getAge(); // <-- This was the error
-            vals[0] = record.getAge(); // <-- CORRECTED
+            // Index 0: Age (getAge() now returns double)
+            vals[1] = record.getAge();
+            // Index 1: BMI (double)
             vals[1] = record.getBmi();
 
             // Populate value for Diagnosis (mapping the string to Weka's internal index)
-            // Assumes getDiagnosis() returns either "LowRisk" or "HighRisk"
             int classIndex = data.attribute(2).indexOfValue(record.getDiagnosis());
-            vals[2] = classIndex;
+            // Index 2: Diagnosis (must be cast to double for the double array)
+            vals[2] = (double) classIndex;
 
+            // Create a dense instance and add it to the Weka data structure
             data.add(new DenseInstance(1.0, vals));
         }
         return data;

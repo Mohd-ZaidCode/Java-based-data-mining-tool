@@ -46,7 +46,7 @@ public class DataReader {
                         // CORRECTED: Was 'values.[3]trim()'
                         String diagnosis = values[3].trim();
 
-                        PatientRecord p = new PatientRecord(id, age, bmi, diagnosis);
+                        PatientRecord p = new PatientRecord(id, (int) age, bmi, diagnosis);
                         records.add(p);
 
                     } catch (NumberFormatException e) {
